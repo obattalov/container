@@ -114,6 +114,21 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
+func TestNilTimeout(t *testing.T) {
+	l := NewLru(1000, 0, nil)
+	l.Put(1, 1, 1)
+	l.Put(2, 2, 1)
+	if l.Len() != 2 {
+		t.Fatal("Must have 2 elements")
+	}
+
+	time.Sleep(10 * time.Millisecond)
+	l.SweepByTime()
+	if l.Len() != 2 || l.Get(1) == nil || l.Get(2) == nil {
+		t.Fatal("It must still have 2 elements")
+	}
+}
+
 func TestDeleteOrder(t *testing.T) {
 	l := NewLru(3, time.Hour, nil)
 	l.Put(1, 1, 1)
@@ -189,5 +204,63 @@ func TestRemoveFromList(t *testing.T) {
 	h = removeFromList(h, e3)
 	if h != nil {
 		t.Fatal("Incorrect list (3)")
+	}
+}
+
+func TestIterate(t *testing.T) {
+	l := NewLru(3, time.Hour, nil)
+	l.Put(1, 1, 1)
+	l.Put(2, 2, 1)
+	l.Put(3, 3, 1)
+
+	i := 3
+	l.Iterate(func(k, v interface{}) bool {
+		if k.(int) != i {
+			t.Fatal("Expecting ", i, ", but got ", k)
+		}
+		i--
+		return true
+	})
+	l.Put(4, 4, 1)
+	l.Get(3)
+	l.Get(2)
+	l.Get(1) // should be pulled out
+	i = 2
+	l.Iterate(func(k, v interface{}) bool {
+		if k.(int) != i {
+			t.Fatal("Expecting ", i, ", but got ", k)
+		}
+		i++
+		return true
+	})
+
+	// now visit only first one
+	i = 2
+	l.Iterate(func(k, v interface{}) bool {
+		if k.(int) != i {
+			t.Fatal("Expecting ", i, ", but got ", k)
+		}
+		return false
+	})
+}
+
+func TestGetPeek(t *testing.T) {
+	l := NewLru(3, time.Hour, nil)
+	l.Put(1, 1, 1)
+	l.Put(2, 2, 1)
+	l.Put(3, 3, 1)
+
+	if l.Get(4) != nil {
+		t.Fatal("Should not be 4 in the container")
+	}
+
+	v := l.Get(3)
+	ts := v.TouchedAt()
+	time.Sleep(10 * time.Microsecond)
+	if l.Peek(3).TouchedAt() != ts {
+		t.Fatal("Peek should not affect ts")
+	}
+	if l.Get(3).TouchedAt() == ts {
+		t.Fatal("Get should affect ts")
 	}
 }
