@@ -113,6 +113,9 @@ func (bbi *BtsBufIterator) Len() int {
 // method
 func (bbw *BtsBufWriter) Reset(buf []byte, extendable bool) {
 	bbw.buf = buf
+	if cap(bbw.buf) > 0 {
+		bbw.buf = bbw.buf[:cap(bbw.buf)]
+	}
 	bbw.offs = 0
 	bbw.clsdPos = -1
 	bbw.ext = extendable
@@ -124,8 +127,11 @@ func (bbw *BtsBufWriter) Reset(buf []byte, extendable bool) {
 // If the buffer is extendable, it will try to re-allocate the buffer to make
 // the request possible
 func (bbw *BtsBufWriter) Allocate(ln int) ([]byte, error) {
+	if bbw.clsdPos >= 0 {
+		return nil, errors.New("the writer already closed")
+	}
 	rest := len(bbw.buf) - bbw.offs - ln - 4
-	if rest < 4 && rest != 0 && !bbw.extend(ln+4) {
+	if rest < 0 && !bbw.extend(ln+4) {
 		return nil, errors.New(fmt.Sprintf("not enough space - available %d, but needed %d", len(bbw.buf)-bbw.offs, ln+4))
 	}
 	binary.BigEndian.PutUint32(bbw.buf[bbw.offs:], uint32(ln))
@@ -140,7 +146,7 @@ func (bbw *BtsBufWriter) extend(ln int) bool {
 		return false
 	}
 	nsz := len(bbw.buf) * 3 / 2
-	if len(bbw.buf)+ln > nsz {
+	if bbw.offs+ln > nsz {
 		nsz = len(bbw.buf) + ln*2
 	}
 	nb := make([]byte, nsz)
@@ -164,12 +170,10 @@ func (bbw *BtsBufWriter) Close() ([]byte, error) {
 	if bbw.clsdPos >= 0 {
 		return bbw.buf[:bbw.clsdPos], nil
 	}
-	if bbw.offs == len(bbw.buf) {
-		bbw.clsdPos = bbw.offs
-		return bbw.buf[:bbw.clsdPos], nil
-	}
 	if len(bbw.buf)-bbw.offs < 4 {
-		return nil, errors.New("not enough space")
+		bbw.clsdPos = bbw.offs
+		bbw.buf = bbw.buf[:bbw.clsdPos]
+		return bbw.buf, nil
 	}
 	binary.BigEndian.PutUint32(bbw.buf[bbw.offs:], uint32(0xFFFFFFFF))
 	bbw.clsdPos = bbw.offs

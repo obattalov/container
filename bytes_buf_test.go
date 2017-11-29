@@ -97,15 +97,21 @@ func TestInsufficientAllocate(t *testing.T) {
 	}
 
 	bbw.Reset(buf[:], false)
+	bf, err = bbw.Allocate(7)
+	if bf == nil || len(bf) != 7 || err != nil {
+		t.Fatal("Should be able to allocate 7 bytes err=", err)
+	}
+
+	bbw.Reset(buf[:], false)
 	bf, err = bbw.Allocate(8)
 	if bf == nil || len(bf) != 8 || err != nil {
 		t.Fatal("Should be able to allocate 8 bytes err=", err)
 	}
 
 	bbw.Reset(buf[:], false)
-	bf, err = bbw.Allocate(5)
+	bf, err = bbw.Allocate(9)
 	if bf != nil || err == nil {
-		t.Fatal("Should not be able to allocate 5 bytes err=", err)
+		t.Fatal("Should not be able to allocate 9 bytes err=", err)
 	}
 	bbw.Reset(buf[:], false)
 	bf, err = bbw.Allocate(25)
@@ -133,6 +139,30 @@ func TestEmptyBufIterator(t *testing.T) {
 	bbi.Next()
 	if !bbi.End() || bbi.Get() != nil {
 		t.Fatal("Empty iterator check fail (3)")
+	}
+}
+
+func TestAllocateAndClosed(t *testing.T) {
+	var bbw BtsBufWriter
+	var buf [12]byte
+	bbw.Reset(buf[:], false)
+	bbw.Allocate(6)
+	bf, err := bbw.Close()
+	if len(bf) != 10 || len(bbw.Buf()) != 10 || err != nil {
+		t.Fatal("Should be closed ok without marker! err=", err)
+	}
+
+	bbw.Reset(bbw.Buf(), false)
+	if len(bbw.Buf()) != 12 {
+		t.Fatal("Buf len must be set to capacity")
+	}
+	bf, err = bbw.Close()
+	if len(bf) != 0 || len(bbw.Buf()) != 12 || err != nil {
+		t.Fatal("Should be closed ok without marker! err=", err)
+	}
+	_, err = bbw.Allocate(2)
+	if err == nil {
+		t.Fatal("Allocate must return error after closing")
 	}
 }
 
