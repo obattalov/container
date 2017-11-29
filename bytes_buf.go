@@ -3,6 +3,7 @@ package container
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 )
 
 type (
@@ -11,6 +12,7 @@ type (
 		buf     []byte
 		clsdPos int
 		offs    int
+		ext     bool
 	}
 
 	// BtsBufIterator can iterate over slice of bytes which contains some
@@ -106,24 +108,50 @@ func (bbi *BtsBufIterator) Len() int {
 	return bbi.cnt
 }
 
-// Reset Initializes the writer by provided slice.
-func (bbw *BtsBufWriter) Reset(buf []byte) {
+// Reset Initializes the writer by provided slice. The extendable flag
+// allows the buffer will be re-allocated in case of not enough space in Allocate
+// method
+func (bbw *BtsBufWriter) Reset(buf []byte, extendable bool) {
 	bbw.buf = buf
 	bbw.offs = 0
 	bbw.clsdPos = -1
+	bbw.ext = extendable
 }
 
 // Allocate reserves ln bytes for data and writes its size before the chunk.
 // The method returns slice of allocated bytes. In case of the allocation is not
-// possible, it returns error
+// possible, it returns error.
+// If the buffer is extendable, it will try to re-allocate the buffer to make
+// the request possible
 func (bbw *BtsBufWriter) Allocate(ln int) ([]byte, error) {
 	rest := len(bbw.buf) - bbw.offs - ln - 4
-	if rest < 4 && rest != 0 {
-		return nil, errors.New("not enough space")
+	if rest < 4 && rest != 0 && !bbw.extend(ln+4) {
+		return nil, errors.New(fmt.Sprintf("not enough space - available %d, but needed %d", len(bbw.buf)-bbw.offs, ln+4))
 	}
 	binary.BigEndian.PutUint32(bbw.buf[bbw.offs:], uint32(ln))
 	bbw.offs += ln + 4
 	return bbw.buf[bbw.offs-ln : bbw.offs], nil
+}
+
+// extend tries to extend the buffer if it is possbile to be able store at least
+// ln bytes (including its size)
+func (bbw *BtsBufWriter) extend(ln int) bool {
+	if !bbw.ext {
+		return false
+	}
+	nsz := len(bbw.buf) * 3 / 2
+	if len(bbw.buf)+ln > nsz {
+		nsz = len(bbw.buf) + ln*2
+	}
+	nb := make([]byte, nsz)
+	copy(nb, bbw.buf)
+	bbw.buf = nb
+	return true
+}
+
+// Buf() returns the buffer underlying the writer
+func (bbw *BtsBufWriter) Buf() []byte {
+	return bbw.buf
 }
 
 // Close puts EOF marker or completes the writing process. Consequentive

@@ -10,7 +10,7 @@ import (
 func TestBtsBufWriterEmpty(t *testing.T) {
 	var bbw BtsBufWriter
 	var buf [100]byte
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err := bbw.Close()
 	if err != nil || len(bf) != 0 {
 		t.Fatal("should be empty")
@@ -25,7 +25,7 @@ func TestBtsBufWriterEmpty(t *testing.T) {
 func TestBtsBufWriterAllocate(t *testing.T) {
 	var bbw BtsBufWriter
 	var buf [100]byte
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err := bbw.Allocate(20)
 	if bf == nil || len(bf) != 20 || err != nil {
 		t.Fatal("Should be able to allocate 20 bytes err=", err)
@@ -56,33 +56,58 @@ func TestBtsBufWriterAllocate(t *testing.T) {
 	}
 }
 
+func TestBtsBufWriterAllocateExt(t *testing.T) {
+	var bbw BtsBufWriter
+	bbw.Reset(nil, true)
+	for i := 0; i < 100; i++ {
+		_, err := bbw.Allocate(0)
+		if err != nil {
+			t.Fatal("Should be extendable err=", err)
+		}
+	}
+	if len(bbw.Buf()) < 400 {
+		t.Fatal("Expecting at least 400 bytes in length, but it is ", len(bbw.Buf()))
+	}
+
+	bbw.Reset(nil, true)
+	for i := 0; i < 100; i++ {
+		_, err := bbw.Allocate(100)
+		if err != nil {
+			t.Fatal("Should be extendable err=", err)
+		}
+	}
+	if len(bbw.Buf()) < 10400 {
+		t.Fatal("Expecting at least 10400 bytes in length, but it is ", len(bbw.Buf()))
+	}
+}
+
 func TestInsufficientAllocate(t *testing.T) {
 	var bbw BtsBufWriter
 	var buf [12]byte
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err := bbw.Allocate(4)
 	if bf == nil || len(bf) != 4 || err != nil {
 		t.Fatal("Should be able to allocate 4 bytes err=", err)
 	}
 
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err = bbw.Allocate(2)
 	if bf == nil || len(bf) != 2 || err != nil {
 		t.Fatal("Should be able to allocate 2 bytes err=", err)
 	}
 
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err = bbw.Allocate(8)
 	if bf == nil || len(bf) != 8 || err != nil {
 		t.Fatal("Should be able to allocate 8 bytes err=", err)
 	}
 
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err = bbw.Allocate(5)
 	if bf != nil || err == nil {
 		t.Fatal("Should not be able to allocate 5 bytes err=", err)
 	}
-	bbw.Reset(buf[:])
+	bbw.Reset(buf[:], false)
 	bf, err = bbw.Allocate(25)
 	if bf != nil || err == nil {
 		t.Fatal("Should not be able to allocate 25 bytes err=", err)
@@ -153,11 +178,10 @@ func TestResetBtsBufIterator(t *testing.T) {
 
 func TestBtsBufIterator(t *testing.T) {
 	var bbw BtsBufWriter
-	var dst [200]byte
 	var src [92]byte
 
 	rand.Read(src[:])
-	bbw.Reset(dst[:])
+	bbw.Reset(nil, true)
 	var sz int
 	for offs := 0; offs < len(src); offs += sz {
 		sz = 20 + offs/10
@@ -174,7 +198,7 @@ func TestBtsBufIterator(t *testing.T) {
 	}
 
 	var bbi BtsBufIterator
-	err = bbi.Reset(dst[:])
+	err = bbi.Reset(bbw.Buf())
 	if err != nil {
 		t.Fatal("Expecting no problems with the dst buf, but err=", err)
 	}
@@ -204,7 +228,7 @@ func TestBtsBufIteratorEven(t *testing.T) {
 	var src [8]byte
 
 	rand.Read(src[:])
-	bbw.Reset(dst[:])
+	bbw.Reset(dst[:], false)
 	for offs := 0; offs < len(src); offs += 4 {
 		bw, err := bbw.Allocate(4)
 		if len(bw) != 4 || err != nil {
