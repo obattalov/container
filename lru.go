@@ -163,6 +163,8 @@ func (l *Lru) delete(e *element, cb bool) {
 	if cb && l.cback != nil {
 		l.cback(e.v.key, e.v.val)
 	}
+	e.v.key = nil
+	e.v.val = nil
 }
 
 func removeFromList(head, e *element) *element {
