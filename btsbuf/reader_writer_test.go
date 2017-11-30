@@ -1,4 +1,4 @@
-package container
+package btsbuf
 
 import (
 	"encoding/binary"
@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestBtsBufWriterEmpty(t *testing.T) {
-	var bbw BtsBufWriter
+func TestWriterEmpty(t *testing.T) {
+	var bbw Writer
 	var buf [100]byte
 	bbw.Reset(buf[:], false)
 	bf, err := bbw.Close()
@@ -22,8 +22,8 @@ func TestBtsBufWriterEmpty(t *testing.T) {
 	}
 }
 
-func TestBtsBufWriterAllocate(t *testing.T) {
-	var bbw BtsBufWriter
+func TestWriterAllocate(t *testing.T) {
+	var bbw Writer
 	var buf [100]byte
 	bbw.Reset(buf[:], false)
 	bf, err := bbw.Allocate(20)
@@ -56,8 +56,8 @@ func TestBtsBufWriterAllocate(t *testing.T) {
 	}
 }
 
-func TestBtsBufWriterAllocateExt(t *testing.T) {
-	var bbw BtsBufWriter
+func TestWriterAllocateExt(t *testing.T) {
+	var bbw Writer
 	bbw.Reset(nil, true)
 	for i := 0; i < 100; i++ {
 		_, err := bbw.Allocate(0)
@@ -82,7 +82,7 @@ func TestBtsBufWriterAllocateExt(t *testing.T) {
 }
 
 func TestInsufficientAllocate(t *testing.T) {
-	var bbw BtsBufWriter
+	var bbw Writer
 	var buf [12]byte
 	bbw.Reset(buf[:], false)
 	bf, err := bbw.Allocate(4)
@@ -121,7 +121,7 @@ func TestInsufficientAllocate(t *testing.T) {
 }
 
 func TestEmptyBufIterator(t *testing.T) {
-	var bbi BtsBufIterator
+	var bbi Reader
 	if !bbi.End() || bbi.Get() != nil {
 		t.Fatal("Empty iterator check fail")
 	}
@@ -143,7 +143,7 @@ func TestEmptyBufIterator(t *testing.T) {
 }
 
 func TestAllocateAndClosed(t *testing.T) {
-	var bbw BtsBufWriter
+	var bbw Writer
 	var buf [12]byte
 	bbw.Reset(buf[:], false)
 	bbw.Allocate(6)
@@ -166,8 +166,8 @@ func TestAllocateAndClosed(t *testing.T) {
 	}
 }
 
-func TestResetBtsBufIterator(t *testing.T) {
-	var bbi BtsBufIterator
+func TestResetReader(t *testing.T) {
+	var bbi Reader
 	var buf [20]byte
 	err := bbi.Reset(buf[:4])
 	if err != nil {
@@ -206,8 +206,8 @@ func TestResetBtsBufIterator(t *testing.T) {
 	}
 }
 
-func TestBtsBufIterator(t *testing.T) {
-	var bbw BtsBufWriter
+func TestReader(t *testing.T) {
+	var bbw Writer
 	var src [92]byte
 
 	rand.Read(src[:])
@@ -227,7 +227,7 @@ func TestBtsBufIterator(t *testing.T) {
 		t.Fatal("Something goes wrong with writing")
 	}
 
-	var bbi BtsBufIterator
+	var bbi Reader
 	err = bbi.Reset(bbw.Buf())
 	if err != nil {
 		t.Fatal("Expecting no problems with the dst buf, but err=", err)
@@ -252,8 +252,8 @@ func TestBtsBufIterator(t *testing.T) {
 	}
 }
 
-func TestBtsBufIteratorEven(t *testing.T) {
-	var bbw BtsBufWriter
+func TestReaderEven(t *testing.T) {
+	var bbw Writer
 	var dst [16]byte
 	var src [8]byte
 
@@ -272,7 +272,7 @@ func TestBtsBufIteratorEven(t *testing.T) {
 		t.Fatal("Something goes wrong with writing")
 	}
 
-	var bbi BtsBufIterator
+	var bbi Reader
 	err = bbi.Reset(dst[:])
 	if err != nil {
 		t.Fatal("Expecting no problems with the dst buf, but err=", err)
@@ -297,5 +297,17 @@ func TestBtsBufIteratorEven(t *testing.T) {
 	}
 	if its != 2 {
 		t.Fatal("should be iterate over 2 elems")
+	}
+}
+
+func TestEmptyBufInit(t *testing.T) {
+	var bbw Writer
+	var buf [100]byte
+	bbw.Reset(buf[:], false)
+	bbw.Close()
+	var bbr Reader
+	bbr.Reset(bbw.Buf())
+	if !bbr.End() {
+		t.Fatal("the buffer must report be empty")
 	}
 }
