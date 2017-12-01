@@ -38,7 +38,7 @@ func check(buf []byte) (int, error) {
 		return cnt, nil
 	}
 
-	return -1, errors.New("broken structure")
+	return 0, errors.New("broken structure")
 }
 
 // Reset initializes Reader and checks whether the provided buf
@@ -47,13 +47,15 @@ func check(buf []byte) (int, error) {
 // and the Next() call will not have any effect
 func (bbi *Reader) Reset(buf []byte) error {
 	cnt, err := check(buf)
+	bbi.buf = nil
+	bbi.cur = nil
+	bbi.offs = 0
+	bbi.cnt = cnt
+
 	if err != nil {
 		return err
 	}
 	bbi.buf = buf
-	bbi.cur = nil
-	bbi.offs = 0
-	bbi.cnt = cnt
 	bbi.fillCur()
 	return nil
 }

@@ -310,4 +310,29 @@ func TestEmptyBufInit(t *testing.T) {
 	if !bbr.End() {
 		t.Fatal("the buffer must report be empty")
 	}
+	bbr.Reset(nil)
+	if !bbr.End() {
+		t.Fatal("the buffer must report be empty when reset with nil")
+	}
+}
+
+func TestBrokenReaderReset(t *testing.T) {
+	var bbw Writer
+	var buf [100]byte
+	bbw.Reset(buf[:], false)
+	bbw.Allocate(10)
+	bbw.Allocate(20)
+	bbw.Close()
+
+	var bbr Reader
+	bbr.Reset(bbw.Buf())
+	if bbr.End() || bbr.Len() != 2 {
+		t.Fatal("the buffer must be reset ok")
+	}
+
+	buf[1] = 0xFF
+	err := bbr.Reset(buf[:])
+	if err == nil || !bbr.End() || bbr.Len() != 0 {
+		t.Fatal("the buffer must not be reset, but err=", err, " bbr.End()=", bbr.End(), ", bbr.Len()=", bbr.Len())
+	}
 }
