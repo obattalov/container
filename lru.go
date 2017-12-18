@@ -112,9 +112,17 @@ func (l *Lru) DeleteNoCallback(k interface{}) {
 	}
 }
 
+func (l *Lru) Clear(cb bool) {
+	for l.head != nil {
+		l.delete(l.head, cb)
+	}
+}
+
 // Iterate is the container visitor which walks over the elements in LRU order.
 // It calls f() for every key-value pair and continues until the f() returns true,
 // or all elements are visited.
+//
+// Note: the modifications of the container must not allowed in the f
 func (l *Lru) Iterate(f LruCallback) {
 	h := l.head
 	for h != nil {

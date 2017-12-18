@@ -264,3 +264,32 @@ func TestGetPeek(t *testing.T) {
 		t.Fatal("Get should affect ts")
 	}
 }
+
+func TestClear(t *testing.T) {
+	i := 0
+	f := func(k, v interface{}) {
+		i++
+	}
+
+	l := NewLru(30, time.Hour, f)
+	l.Put(1, 1, 1)
+	l.Put(2, 2, 1)
+	l.Put(3, 3, 2)
+	if l.Len() != 3 {
+		t.Fatal("Must have 3 elements")
+	}
+
+	l.Clear(false)
+	if i != 0 || l.Size() != 0 || l.Len() != 0 {
+		t.Fatal("clear doesn't work properly i=", i)
+	}
+
+	l.Put(1, 1, 1)
+	l.Put(2, 2, 1)
+	l.Put(3, 3, 2)
+	l.Clear(true)
+	if i != 3 || l.Size() != 0 || l.Len() != 0 {
+		t.Fatal("clear doesn't work properly i=", i)
+	}
+
+}
