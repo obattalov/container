@@ -32,14 +32,18 @@ func (bbw *Writer) Reset(buf []byte, extendable bool) {
 // Allocate reserves ln bytes for data and writes its size before the chunk.
 // The method returns slice of allocated bytes. In case of the allocation is not
 // possible, it returns error.
-// If the buffer is extendable, it will try to re-allocate the buffer to make
-// the request possible
-func (bbw *Writer) Allocate(ln int) ([]byte, error) {
+//
+// extend param defines the caller desire to extend the buffer if the size is
+// not big enough or return a error, without extension. If the buffer is not
+// extendable, it will return an error in any case when the buffers size is insufficient.
+// If the buffer is extendable, it will try to re-allocate the buffer only if the
+// extend == true
+func (bbw *Writer) Allocate(ln int, extend bool) ([]byte, error) {
 	if bbw.clsdPos >= 0 {
 		return nil, errors.New("the writer already closed")
 	}
 	rest := len(bbw.buf) - bbw.offs - ln - 4
-	if rest < 0 && !bbw.extend(ln+4) {
+	if rest < 0 && (!extend || !bbw.extend(ln+4)) {
 		return nil, errors.New(fmt.Sprintf("not enough space - available %d, but needed %d", len(bbw.buf)-bbw.offs, ln+4))
 	}
 	binary.BigEndian.PutUint32(bbw.buf[bbw.offs:], uint32(ln))

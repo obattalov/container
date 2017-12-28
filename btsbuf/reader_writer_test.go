@@ -26,17 +26,17 @@ func TestWriterAllocate(t *testing.T) {
 	var bbw Writer
 	var buf [100]byte
 	bbw.Reset(buf[:], false)
-	bf, err := bbw.Allocate(20)
+	bf, err := bbw.Allocate(20, true)
 	if bf == nil || len(bf) != 20 || err != nil {
 		t.Fatal("Should be able to allocate 20 bytes err=", err)
 	}
 
-	bf, err = bbw.Allocate(20)
+	bf, err = bbw.Allocate(20, true)
 	if bf == nil || len(bf) != 20 || err != nil {
 		t.Fatal("Should be able to allocate 20 bytes again err=", err)
 	}
 
-	bf, err = bbw.Allocate(60)
+	bf, err = bbw.Allocate(60, true)
 	if err == nil {
 		t.Fatal("Should not be able to allocate 60 bytes err=", err)
 	}
@@ -60,7 +60,7 @@ func TestWriterAllocateExt(t *testing.T) {
 	var bbw Writer
 	bbw.Reset(nil, true)
 	for i := 0; i < 100; i++ {
-		_, err := bbw.Allocate(0)
+		_, err := bbw.Allocate(0, true)
 		if err != nil {
 			t.Fatal("Should be extendable err=", err)
 		}
@@ -71,7 +71,7 @@ func TestWriterAllocateExt(t *testing.T) {
 
 	bbw.Reset(nil, true)
 	for i := 0; i < 100; i++ {
-		_, err := bbw.Allocate(100)
+		_, err := bbw.Allocate(100, true)
 		if err != nil {
 			t.Fatal("Should be extendable err=", err)
 		}
@@ -81,40 +81,61 @@ func TestWriterAllocateExt(t *testing.T) {
 	}
 }
 
+func TestWriterAllocateExt2(t *testing.T) {
+	var bbw Writer
+	var buf [10]byte
+	bbw.Reset(buf[:], true)
+	_, err := bbw.Allocate(10, false)
+	if err == nil {
+		t.Fatal("Should report error, cause ask to not extend")
+	}
+
+	bf, err := bbw.Allocate(10, true)
+	if err != nil || len(bf) != 10 {
+		t.Fatal("Should not report error, cause ask to extend")
+	}
+
+	bbw.Reset(buf[:], false)
+	_, err = bbw.Allocate(10, true)
+	if err == nil {
+		t.Fatal("Should report error, cause ask to extend, but it is not extendable")
+	}
+}
+
 func TestInsufficientAllocate(t *testing.T) {
 	var bbw Writer
 	var buf [12]byte
 	bbw.Reset(buf[:], false)
-	bf, err := bbw.Allocate(4)
+	bf, err := bbw.Allocate(4, true)
 	if bf == nil || len(bf) != 4 || err != nil {
 		t.Fatal("Should be able to allocate 4 bytes err=", err)
 	}
 
 	bbw.Reset(buf[:], false)
-	bf, err = bbw.Allocate(2)
+	bf, err = bbw.Allocate(2, true)
 	if bf == nil || len(bf) != 2 || err != nil {
 		t.Fatal("Should be able to allocate 2 bytes err=", err)
 	}
 
 	bbw.Reset(buf[:], false)
-	bf, err = bbw.Allocate(7)
+	bf, err = bbw.Allocate(7, true)
 	if bf == nil || len(bf) != 7 || err != nil {
 		t.Fatal("Should be able to allocate 7 bytes err=", err)
 	}
 
 	bbw.Reset(buf[:], false)
-	bf, err = bbw.Allocate(8)
+	bf, err = bbw.Allocate(8, true)
 	if bf == nil || len(bf) != 8 || err != nil {
 		t.Fatal("Should be able to allocate 8 bytes err=", err)
 	}
 
 	bbw.Reset(buf[:], false)
-	bf, err = bbw.Allocate(9)
+	bf, err = bbw.Allocate(9, true)
 	if bf != nil || err == nil {
 		t.Fatal("Should not be able to allocate 9 bytes err=", err)
 	}
 	bbw.Reset(buf[:], false)
-	bf, err = bbw.Allocate(25)
+	bf, err = bbw.Allocate(25, true)
 	if bf != nil || err == nil {
 		t.Fatal("Should not be able to allocate 25 bytes err=", err)
 	}
@@ -146,7 +167,7 @@ func TestAllocateAndClosed(t *testing.T) {
 	var bbw Writer
 	var buf [12]byte
 	bbw.Reset(buf[:], false)
-	bbw.Allocate(6)
+	bbw.Allocate(6, true)
 	bf, err := bbw.Close()
 	if len(bf) != 10 || len(bbw.Buf()) != 10 || err != nil {
 		t.Fatal("Should be closed ok without marker! err=", err)
@@ -160,7 +181,7 @@ func TestAllocateAndClosed(t *testing.T) {
 	if len(bf) != 0 || len(bbw.Buf()) != 12 || err != nil {
 		t.Fatal("Should be closed ok without marker! err=", err)
 	}
-	_, err = bbw.Allocate(2)
+	_, err = bbw.Allocate(2, true)
 	if err == nil {
 		t.Fatal("Allocate must return error after closing")
 	}
@@ -215,7 +236,7 @@ func TestReader(t *testing.T) {
 	var sz int
 	for offs := 0; offs < len(src); offs += sz {
 		sz = 20 + offs/10
-		bw, err := bbw.Allocate(sz)
+		bw, err := bbw.Allocate(sz, true)
 		if len(bw) != sz || err != nil {
 			t.Fatal("Something goes wrong with allocation err=", err)
 		}
@@ -260,7 +281,7 @@ func TestReaderEven(t *testing.T) {
 	rand.Read(src[:])
 	bbw.Reset(dst[:], false)
 	for offs := 0; offs < len(src); offs += 4 {
-		bw, err := bbw.Allocate(4)
+		bw, err := bbw.Allocate(4, true)
 		if len(bw) != 4 || err != nil {
 			t.Fatal("Something goes wrong with allocation err=", err)
 		}
@@ -320,8 +341,8 @@ func TestBrokenReaderReset(t *testing.T) {
 	var bbw Writer
 	var buf [100]byte
 	bbw.Reset(buf[:], false)
-	bbw.Allocate(10)
-	bbw.Allocate(20)
+	bbw.Allocate(10, true)
+	bbw.Allocate(20, true)
 	bbw.Close()
 
 	var bbr Reader
