@@ -5,3 +5,4 @@ A cache container with "Least Recently Used" strategy. It controls element sizes
 
 ## RingBuffer
 TBD.
+
