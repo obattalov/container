@@ -5,13 +5,13 @@ import (
 )
 
 type (
-	element struct {
-		prev *element
-		next *element
-		v    Value
+	lru_element struct {
+		prev *lru_element
+		next *lru_element
+		v    LruValue
 	}
 
-	Value struct {
+	LruValue struct {
 		size int64
 		ts   time.Time
 		key  interface{}
@@ -22,9 +22,9 @@ type (
 	// element by size, time of touch, or both. It keeps recently used items
 	// near the top of cache.
 	Lru struct {
-		head    *element
-		pool    *element
-		kvMap   map[interface{}]*element
+		head    *lru_element
+		pool    *lru_element
+		kvMap   map[interface{}]*lru_element
 		size    int64
 		maxSize int64
 		maxDur  time.Duration
@@ -44,7 +44,7 @@ var nilTime = time.Time{}
 // Timeout to could be 0, what means don't use it at all
 func NewLru(maxSize int64, to time.Duration, cback LruDeleteCallback) *Lru {
 	l := new(Lru)
-	l.kvMap = make(map[interface{}]*element)
+	l.kvMap = make(map[interface{}]*lru_element)
 	l.maxSize = maxSize
 	l.maxDur = to
 	l.cback = cback
@@ -64,7 +64,7 @@ func (l *Lru) Put(k, v interface{}, size int64) {
 		e = l.pool
 		l.pool = nil
 	} else {
-		e = new(element)
+		e = new(lru_element)
 	}
 	e.v.key = k
 	e.v.val = v
@@ -75,7 +75,7 @@ func (l *Lru) Put(k, v interface{}, size int64) {
 	l.size += size
 }
 
-func (l *Lru) Get(k interface{}) *Value {
+func (l *Lru) Get(k interface{}) *LruValue {
 	ts := l.SweepByTime()
 	e, ok := l.kvMap[k]
 	if ok {
@@ -87,7 +87,7 @@ func (l *Lru) Get(k interface{}) *Value {
 	return nil
 }
 
-func (l *Lru) Peek(k interface{}) *Value {
+func (l *Lru) Peek(k interface{}) *LruValue {
 	l.SweepByTime()
 	e, ok := l.kvMap[k]
 	if ok {
@@ -163,7 +163,7 @@ func (l *Lru) sweepBySize(addSize int64) {
 	}
 }
 
-func (l *Lru) delete(e *element, cb bool) {
+func (l *Lru) delete(e *lru_element, cb bool) {
 	l.head = removeFromList(l.head, e)
 	l.size -= e.v.size
 	l.pool = e
@@ -175,7 +175,7 @@ func (l *Lru) delete(e *element, cb bool) {
 	e.v.val = nil
 }
 
-func removeFromList(head, e *element) *element {
+func removeFromList(head, e *lru_element) *lru_element {
 	if e == head && head.next == head {
 		head = nil
 	}
@@ -188,7 +188,7 @@ func removeFromList(head, e *element) *element {
 }
 
 // add n to list with head and returns new head
-func addToHead(head *element, n *element) *element {
+func addToHead(head *lru_element, n *lru_element) *lru_element {
 	if n == nil {
 		return head
 	}
@@ -204,18 +204,18 @@ func addToHead(head *element, n *element) *element {
 	return n
 }
 
-func (v *Value) Key() interface{} {
+func (v *LruValue) Key() interface{} {
 	return v.key
 }
 
-func (v *Value) Val() interface{} {
+func (v *LruValue) Val() interface{} {
 	return v.val
 }
 
-func (v *Value) Size() int64 {
+func (v *LruValue) Size() int64 {
 	return v.size
 }
 
-func (v *Value) TouchedAt() time.Time {
+func (v *LruValue) TouchedAt() time.Time {
 	return v.ts
 }

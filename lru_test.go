@@ -166,7 +166,7 @@ func TestAddToList(t *testing.T) {
 		t.Fatal("Wrong nil, nil adding result")
 	}
 
-	e := new(element)
+	e := new(lru_element)
 	h = addToHead(nil, e)
 	if h != e || h.next != e || h.prev != e {
 		t.Fatal("Incorrect list")
@@ -177,7 +177,7 @@ func TestAddToList(t *testing.T) {
 		t.Fatal("Incorrect list (2)")
 	}
 
-	e1 := new(element)
+	e1 := new(lru_element)
 	h = addToHead(h, e1)
 	if h != e1 || h.next != e || h.prev != e || e.prev != h || e.next != h {
 		t.Fatal("Incorrect list (3)")
@@ -185,9 +185,9 @@ func TestAddToList(t *testing.T) {
 }
 
 func TestRemoveFromList(t *testing.T) {
-	e3 := new(element)
-	e2 := new(element)
-	e1 := new(element)
+	e3 := new(lru_element)
+	e2 := new(lru_element)
+	e1 := new(lru_element)
 	h := addToHead(nil, e3)
 	h = addToHead(h, e2)
 	h = addToHead(h, e1)
