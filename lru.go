@@ -156,6 +156,15 @@ func (l *Lru) SweepByTime() time.Time {
 	return tm
 }
 
+// GetData returns underlying container data for the LRU
+func (l *Lru) GetData() map[interface{}]interface{} {
+	res := make(map[interface{}]interface{}, len(l.kvMap))
+	for k, v := range l.kvMap {
+		res[k] = v.v.val
+	}
+	return res
+}
+
 func (l *Lru) sweepBySize(addSize int64) {
 	for l.head != nil && l.size+addSize > l.maxSize {
 		last := l.head.prev

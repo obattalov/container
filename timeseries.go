@@ -90,6 +90,10 @@ func (ts *Timeseries) Total() TsValue {
 	return ts.total
 }
 
+func (ts *Timeseries) StartTime() time.Time {
+	return ts.tail.next.sTime
+}
+
 func (ts *Timeseries) sweep() time.Time {
 	now := ts.clockNow()
 	if now.Sub(ts.tail.sTime) >= ts.tsDur {
