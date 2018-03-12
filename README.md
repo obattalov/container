@@ -7,3 +7,8 @@ A cache container with "Least Recently Used" strategy. It controls element sizes
 
 ## RingBuffer
 TBD.
+
+## Contributing
+If you are interested in contributing some code to this project, thanks! Please first [read and accept the Contributors Agreement](https://api-notebook.anypoint.mulesoft.com/notebooks#bc1cf75a0284268407e4).
+
+To discuss this project, please use its [github issues](https://github.com/kplr-io/container/issues) 
