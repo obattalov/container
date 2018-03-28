@@ -7,6 +7,8 @@ type (
 		Next()
 	}
 
+	Concatenator []byte 
+	
 	str_arr_it []string
 )
 
@@ -31,4 +33,9 @@ func (sai *str_arr_it) Next() {
 	if len(*sai) > 0 {
 		*sai = (*sai)[1:]
 	}
+}
+
+func (cn *Concatenator) Write(s []byte) {
+	cnt := append(*cn, s...)
+	cn = &cnt
 }
